@@ -41,8 +41,6 @@ struct MessageContent {
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase", description = "Available commands:")]
 enum Command {
-    #[command(description = "Ask something to GPT.")]
-    Ask(String),
     #[command(description = "Add user to white list.")]
     AddUser(String),
     #[command(description = "Remove user from white list.")]
@@ -70,7 +68,6 @@ async fn main() {
             },
         ));
 
-    // Хендлер свободного текста (не команд)
     let free_text_handler = Update::filter_message().branch(
         dptree::filter_map(|msg: Message| {
             let text = msg.text().unwrap_or("");
@@ -91,8 +88,6 @@ async fn main() {
         .build()
         .dispatch()
         .await;
-
-    //Command::repl(bot, answer).await; //teloxide::commands_repl(bot, answer, Command::ty()).await;
 }
 
 async fn handle_command(
@@ -104,13 +99,6 @@ async fn handle_command(
     let username = msg.from().and_then(|u| u.username.clone());
 
     let is_admin = matches!(username.as_deref(), Some("ksander314"));
-
-    let is_allowed = if let Some(u) = username.as_deref() {
-        let wl = whitelist.lock().await;
-        wl.is_allowed(u)
-    } else {
-        false
-    };
 
     match cmd {
         Command::RemoveUser(user) if is_admin => {
@@ -138,12 +126,6 @@ async fn handle_command(
             let list = wl.list().join("\n@");
             bot.send_message(msg.chat.id, format!("👥 Whitelisted:\n@{}", list))
                 .await?;
-        }
-        Command::Ask(q) if is_allowed => {
-            let reply = ask_gpt(&q)
-                .await
-                .unwrap_or("Error contacting OpenAI.".to_string());
-            bot.send_message(msg.chat.id, reply).await?;
         }
         Command::Help => {
             bot.send_message(msg.chat.id, Command::descriptions().to_string())
