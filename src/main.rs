@@ -45,6 +45,8 @@ enum Command {
     Ask(String),
     #[command(description = "Add user to white list.")]
     AddUser(String),
+    #[command(description = "Remove user from white list.")]
+    RemoveUser(String),
     #[command(description = "Show authorized users.")]
     ListUsers,
     #[command(description = "Show help")]
@@ -111,6 +113,16 @@ async fn handle_command(
     };
 
     match cmd {
+        Command::RemoveUser(user) if is_admin => {
+            let mut wl = whitelist.lock().await;
+            if wl.remove_user(&user) {
+                bot.send_message(msg.chat.id, format!("🗑 Removed @{user}"))
+                    .await?;
+            } else {
+                bot.send_message(msg.chat.id, format!("⚠️ @{user} was not in whitelist"))
+                    .await?;
+            }
+        }
         Command::AddUser(user) if is_admin => {
             let mut wl = whitelist.lock().await;
             if wl.add_user(&user) {
@@ -225,6 +237,14 @@ impl WhiteList {
         let mut file = File::create(path).expect("Failed to create whitelist file");
         file.write_all(json.as_bytes())
             .expect("Failed to write whitelist file");
+    }
+
+    fn remove_user(&mut self, username: &str) -> bool {
+        let removed = self.users.remove(username);
+        if removed {
+            self.save();
+        }
+        removed
     }
 
     fn add_user(&mut self, username: &str) -> bool {
