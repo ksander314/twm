@@ -1,0 +1,11 @@
+[package]
+name = "twm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+teloxide={ version="0.12", features=["macros", "auto-send"] }
+reqwest={ version="0.12", features=["json"] }
+tokio={ version="1", features=["full"] }
+serde={ version="1", features=["derive"] }
+dotenv="0.15"
